@@ -1,0 +1,5 @@
+# macOS 不上传的东西
+gwy-photo-mac-offline.tar
+offline_bundle/
+助手日志.txt
+.DS_Store

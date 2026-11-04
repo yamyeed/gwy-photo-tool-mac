@@ -1,0 +1,93 @@
+#!/bin/bash
+# 照片处理助手 —— 傻瓜式一键入口（双击运行）
+# 流程：选照片 → 自动准备环境（离线包/下载） → 弹出官方工具窗口 → 出片后弹窗告知
+set -u
+
+BUNDLE_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"   # .../照片处理助手.app
+REPO="$(dirname "$BUNDLE_ROOT")"
+LOG="$REPO/助手日志.txt"
+
+exec > >(tee -a "$LOG") 2>&1
+echo "══════ $(date '+%F %T') 照片处理助手启动 ══════"
+
+ALERT='display dialog with title "照片处理助手" buttons {"好"} default button 1 with icon note'
+
+# ---- 1. 依赖自检 ----
+INSTALLED=0
+[ -x "$HOME/Library/Application Support/com.franke.Whisky/Libraries/Wine/bin/wine" ] && INSTALLED=1
+if [ "$INSTALLED" = 0 ] && [ ! -d "$REPO/offline_bundle" ]; then
+    osascript -e 'display dialog "未找到 offline_bundle 离线依赖包。
+
+请把「照片处理助手.app」与 offline_bundle 文件夹放在同一个文件夹里
+（下载的整包解压后就是这个结构），再双击本 App。" buttons {"好"} default button 1 with icon stop with title "照片处理助手"' >/dev/null
+    echo "缺 offline_bundle，退出"; exit 1
+fi
+
+# ---- 2. 选照片 ----
+PHOTO=$(osascript -e 'try
+    set f to choose file with prompt "选择你的证件照原图（蓝/白底 JPG，宽≥295 高≥413，未经美颜压缩）"
+    POSIX path of f
+on error number -128
+    return ""
+end try')
+if [ -z "$PHOTO" ]; then echo "用户取消"; exit 0; fi
+echo "选中原图: $PHOTO"
+
+FIRST=0
+[ "$INSTALLED" = 0 ] && FIRST=1
+if [ "$FIRST" = 1 ]; then
+    osascript -e 'display dialog "首次使用需要准备运行环境（约 1-3 分钟），完成后会自动弹出官方工具窗口。
+
+期间请不要关闭任何窗口。" buttons {"开始"} default button 1 with title "照片处理助手"' >/dev/null
+fi
+
+# ---- 3. 跑主脚本 ----
+osascript -e 'display dialog "即将弹出官方工具窗口。三个小提示：
+
+① 按钮点不动 → 先退出 Mac Mouse Fix 等鼠标增强工具，再点一下窗口标题栏；或用 Tab+空格 键盘操作
+② 保存没反应 → 别点按钮正中心，点按钮的左上角边缘（Retina 屏坐标会偏移）
+③ 成功标志：窗口里显示你的照片和「审核通过，保存退出」
+
+点「启动」继续。" buttons {"启动"} default button 1 with title "照片处理助手"' >/dev/null
+"$REPO/setup_and_run.sh" "$PHOTO"
+RC=$?
+echo "setup_and_run 退出码: $RC"
+
+# ---- 4. 找产物并告知 ----
+SINCE=$(date -v-30M '+%Y%m%d%H%M%S')
+FOUND=$(find "$HOME/.gwy-photo-mac/run_dir" "$HOME/Desktop" "$HOME/Documents" \
+    -maxdepth 2 -name '报名照片*' -newermt "$SINCE" 2>/dev/null | head -1)
+
+if [ -n "$FOUND" ]; then
+    echo "产物: $FOUND"
+    ANS=$(osascript <<ASI
+display dialog "✅ 报名照片已生成！
+
+$FOUND
+
+下一步：用浏览器打开 gwy.cpta.com.cn
+→ 登录 → 上传这张照片 → 选考点 → 缴费
+
+提示：不要用微信/聊天工具转发这张照片，会压缩破坏文件。
+
+现在在访达中显示它吗？" buttons {"打开位置", "完成"} default button 1 with title "照片处理助手"
+ASI
+)
+    if [ "$ANS" = "button returned:打开位置" ]; then
+        open -R "$FOUND"
+    fi
+else
+    osascript <<ASI
+display dialog "程序已退出，但没有找到新生成的「报名照片」。
+
+可能原因：
+① 保存时点了取消
+② 照片审核未通过
+③ 程序在处理图片时出错
+
+详细日志已保存：$LOG
+点击\"打开日志\"查看，或照 README 的「踩过的坑」排查。" buttons {"打开日志", "关闭"} default button 1 with icon caution with title "照片处理助手"
+ASI
+    [ $? -eq 0 ] && open "$LOG"
+fi
+echo "══════ 助手结束 ══════"
