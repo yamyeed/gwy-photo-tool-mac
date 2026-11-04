@@ -64,6 +64,17 @@ tar xf gwy-photo-mac-offline.tar      # 解出 offline_bundle/，与脚本同目
 
 本仓库的核心差异：**出片的是官方程序本体**，产物与 Windows 上逐字节同源，不存在"逆向复刻是否被服务器认可"的问题——这也是官方「必须使用照片处理工具处理」要求的字面满足方式。
 
+## 上不了 GitHub？
+
+国内网络可用镜像直链下载（内容与 Release 完全一致，脚本本身也已内置同样镜像回退）：
+
+- 离线整包（340 MB）：
+  `https://ghfast.top/https://github.com/yamyeed/gwy-photo-tool-mac/releases/download/v1.0.0/gwy-photo-mac-offline.tar`
+- 仓库代码 zip：
+  `https://ghfast.top/https://github.com/yamyeed/gwy-photo-tool-mac/archive/refs/heads/main.zip`
+
+备用镜像：把上面链接里的 `ghfast.top` 换成 `gh-proxy.com`。下载后请核对 SHA-256（见 Release 说明）。镜像站为第三方公共服务，若失效请提 issue，或从网盘备份渠道获取。
+
 ## 发布给别人的三种姿势
 
 1. **网盘整包（小白首选）**：`gwy-photo-mac-offline.tar` + 仓库其余文件打包成一个 zip 发给对方，解压后双击「照片处理助手.app」。
